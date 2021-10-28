@@ -1,5 +1,4 @@
 #%% Imports
-import gym
 import sys
 sys.path.append("../")
 import numpy as np
@@ -19,7 +18,7 @@ logger=TensorboardLogger(loc="./logs/",experiment="DQN")
 #%% Collecting
 print("Collecting random transitions .....")
 curr_state=env.reset()
-for _ in range(10):
+for _ in range(100):
     num_acts=len(curr_state["uavs"])
     acts=env.convert_action_arr([np.random.randint(0,125) for a in range(num_acts)])
     next_state,reward,done,info=env.step(acts)
@@ -32,6 +31,7 @@ for _ in range(10):
 #%% Training
 episode=0
 episode_reward=0
+past_episode_start_step=0
 print("Training starts .......")
 curr_state=env.reset()
 for step in range(1,1000000+1):
@@ -42,8 +42,10 @@ for step in range(1,1000000+1):
     agent.memory.push(curr_state, act, reward, next_state, not done)
     if done:
         episode+=1
-        print('On Episode {} reward {:.2f} on global_step {}'.format(episode,episode_reward,step))
-        logger.log(step,{'episode_reward':episode_reward,"episilon":episilon}) #tensorboard logging
+        total_step_run=step-past_episode_start_step
+        print('On Episode {} reward {:.2f} on global_step {} run for {}'.format(episode,episode_reward,step,total_step_run))
+        logger.log(step,{'episode_reward':episode_reward,"episilon":episilon,"run_for_step":total_step_run}) #tensorboard logging
+        past_episode_start_step=step
         episode_reward=0
         curr_state=env.reset()
     else:
@@ -52,8 +54,7 @@ for step in range(1,1000000+1):
     if step%10000==0:
         agent.updateFixedQ()
            
-    if step%4==0:
-        pass
+    if step%4==0:pass
         #agent.learn(batch_size=32)
 
 #%% Testing   

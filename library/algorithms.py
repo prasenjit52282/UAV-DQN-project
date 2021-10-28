@@ -16,8 +16,7 @@ class DQN:
         self.env=env
         self.memory=replayBuffer(capacity=memory_size,env=self.env)
         
-    def getAction(self,s,episilon): #not migrated yet
-        #has to be vectorized....to give actions for Nxstate
+    def getAction(self,s,episilon):
         if np.random.random()<(1-episilon):
             img,other,own=self.env.state_formatter.get_state(s)
             actions=np.argmax(self.Q(img,other,own),axis=1)
