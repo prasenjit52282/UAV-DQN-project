@@ -5,7 +5,7 @@ import sys
 sys.path.append("../")
 
 class TensorboardLogger:
-    def __init__(self,loc="./logs",experiment="DQN"):
+    def __init__(self,loc="./logs/",experiment="DQN"):
         self.base_log_dir=loc
         self.experiment_name=experiment
         current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")

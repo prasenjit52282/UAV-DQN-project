@@ -4,36 +4,38 @@ from .memory import replayBuffer
 from .neural_networks import Q_Network,hard_update
 
 class DQN:
-    def __init__(self,state_size,action_size,memory_size,gamma=0.99):
+    def __init__(self,env,memory_size,gamma=0.99):
         
-        self.Q=Q_Network(state_size, action_size)
-        self.fixed_Q=Q_Network(state_size, action_size,False)
+        self.Q=Q_Network()
+        self.fixed_Q=Q_Network(trainable=False)
         hard_update(self.Q, self.fixed_Q)
         
         self.optimizer=tf.keras.optimizers.RMSprop(lr=0.00025, rho=0.95, epsilon=0.01)
         self.loss=tf.keras.losses.MeanSquaredError()
         self.gamma=gamma
+        self.env=env
+        self.memory=replayBuffer(capacity=memory_size,env=self.env)
         
-        self.memory=replayBuffer(capacity=memory_size)
-        
-    def getAction(self,s,episilon):
+    def getAction(self,s,episilon): #not migrated yet
         #has to be vectorized....to give actions for Nxstate
         if np.random.random()<(1-episilon):
-            action=np.argmax(self.Q(s.reshape(1,-1)),axis=1)[0]
+            img,other,own=self.env.state_formatter.get_state(s)
+            actions=np.argmax(self.Q(img,other,own),axis=1)
         else:
-            action=np.random.randint(self.Q.action_size)
-        return action
+            num_acts=len(s["uavs"])
+            actions=[np.random.randint(0,self.Q.action_size) for a in range(num_acts)]
+        return actions
         
         
-    def learn(self,batch_size):
-        s,a,r,s_,nd=self.memory.sample(batch_size)
+    def learn(self,batch_size): #not migrated yet
+        s_img,s_other,s_own,a,r,s__img,s__other,s__own,nd=self.memory.sample(batch_size)
         
-        TD_target=r+self.gamma*np.multiply(nd,np.max(self.fixed_Q(s_),axis=1))
+        TD_target=r+self.gamma*np.multiply(nd,np.max(self.fixed_Q(s__img,s__other,s__own),axis=1))
         a_map=tf.keras.utils.to_categorical(a,self.Q.action_size)
         Q_target=np.multiply(TD_target.reshape(-1,1),a_map)
         
         with tf.GradientTape() as tape:
-            loss=self.loss(Q_target,self.Q(s,a))
+            loss=self.loss(Q_target,self.Q(s_img,s_other,s_own,a))
         grads=tape.gradient(loss,self.Q.trainable_variables)
         self.optimizer.apply_gradients(zip(grads,self.Q.trainable_variables))
         
